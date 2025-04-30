@@ -3,11 +3,12 @@
 
 
 from odoo import api, fields, models, _
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, time as dt_time
 import xlsxwriter
 import io
 import base64
 import itertools
+import pytz
 from odoo.exceptions import ValidationError
 
 
@@ -90,6 +91,22 @@ class timesheet_select(models.TransientModel):
                     store_list.append({'id': rec.id, 'name': rec.name})
 
             for emp_name in store_list:
+                # Get the employee record
+                employee = self.env['hr.employee'].browse(emp_name['id'])
+                scheduled_hours = 0.0
+                if employee.resource_calendar_id:
+                    # Convert date to datetime with timezone
+                    user_tz = self.env.user.tz or 'UTC'
+                    tz = pytz.timezone(user_tz)
+                    start_dt = tz.localize(datetime.combine(self.start_date, dt_time.min))
+                    # Use dt_time.max to include the whole end date
+                    end_dt = tz.localize(datetime.combine(self.end_date, dt_time.max))
+                    scheduled_hours = employee.resource_calendar_id.get_work_hours_count(
+                        start_dt, end_dt)
+
+                # Write scheduled hours info before the tables
+                sheet.write(row - 3, 2, f"Scheduled Work Hours: {scheduled_hours}", title_format)
+
                 sheet.merge_range(row - 2, 2, row - 2, 3, f" Employee Name : {emp_name['name']}", title_format)
                 if emp_name['name'] in [i.name for i in grouped_records]:
                     for employee_id, employee_records in grouped_records.items():
