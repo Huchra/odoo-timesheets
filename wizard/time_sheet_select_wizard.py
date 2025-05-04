@@ -81,6 +81,7 @@ class timesheet_select(models.TransientModel):
             sheet.set_column('H:H', 25)  # Project column (index 8)
             sheet.set_column('I:I', 25)  # Project Hours column (index 9)
             sheet.set_column('B:B', 28)  # Scheduled Work Hours (column B, index 1)
+            sheet.set_column('A:A', 28)
 
             row_t = 1
             col_t = 4
@@ -105,9 +106,35 @@ class timesheet_select(models.TransientModel):
                     end_dt = tz.localize(datetime.combine(self.end_date, dt_time.max))
                     scheduled_hours = employee.resource_calendar_id.get_work_hours_count(
                         start_dt, end_dt, compute_leaves=True)
+                    # Calculate leave hours for employee
+                    leave_hours = 0.0
+
+                    leaves = self.env['hr.leave'].search([
+                        ('employee_id', '=', employee.id),
+                        ('state', '=', 'validate'),
+                        ('date_from', '<=', end_dt),
+                        ('date_to', '>=', start_dt)
+                    ])
+                    for leave in leaves:
+                        hours = employee.resource_calendar_id.get_work_hours_count(
+                            leave.date_from, leave.date_to) # this is 24 hours not 8 per
+                        leave_hours += hours
+
+                    scheduled_hours -= leave_hours
+
+                # Calculate total worked hours for this employee in the selected period
+                worked_hours = sum(
+                    rec.unit_amount for rec in self.env['account.analytic.line'].search([
+                        ('employee_id', '=', employee.id),
+                        ('date', '>=', self.start_date),
+                        ('date', '<=', self.end_date)
+                    ])
+                )
 
                 # Write scheduled hours info before the tables
                 sheet.write(row - 3, 2, f"Scheduled Work Hours: {scheduled_hours}", title_format)
+                # Next to it, write time difference
+                sheet.write(row - 3, 3, f"Time Difference: {round(worked_hours - scheduled_hours, 3)}", title_format)
 
                 sheet.merge_range(row - 2, 2, row - 2, 3, f" Employee Name : {emp_name['name']}", title_format)
                 if emp_name['name'] in [i.name for i in grouped_records]:
@@ -136,7 +163,7 @@ class timesheet_select(models.TransientModel):
                                 sheet.write(row, 6, rec.unit_amount)
                                 # Do not write project hours here
                                 total += rec.unit_amount
-                                sheet.write(row+1, 6, total ,title_format)
+                                sheet.write(row+1, 6, total, title_format)
                             # Write project summary table (one row per project)
                             proj_row = start_row + 1
                             for project, hours in project_hours_map[emp_name['name']].items():
