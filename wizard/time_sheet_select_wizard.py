@@ -99,10 +99,25 @@ class timesheet_select(models.TransientModel):
                     user_tz = self.env.user.tz or 'UTC'
                     tz = pytz.timezone(user_tz)
                     start_dt = tz.localize(datetime.combine(self.start_date, dt_time.min))
-                    # Use dt_time.max to include the whole end date
                     end_dt = tz.localize(datetime.combine(self.end_date, dt_time.max))
+                    # Get all scheduled hours for employee
                     scheduled_hours = employee.resource_calendar_id.get_work_hours_count(
                         start_dt, end_dt)
+                    # Calculate leave hours for employee
+                    leave_hours = 0.0
+
+                    leaves = self.env['hr.leave'].search([
+                        ('employee_id', '=', employee.id),
+                        ('state', '=', 'validate'),
+                        ('date_from', '<=', end_dt),
+                        ('date_to', '>=', start_dt)
+                    ])
+                    for leave in leaves:
+                        hours = employee.resource_calendar_id.get_work_hours_count(
+                            leave.date_from, leave.date_to) # this is 24 hours not 8 per
+                        leave_hours += hours
+
+                    scheduled_hours -= leave_hours
 
                 # Write scheduled hours info before the tables
                 sheet.write(row - 3, 2, f"Scheduled Work Hours: {scheduled_hours}", title_format)
