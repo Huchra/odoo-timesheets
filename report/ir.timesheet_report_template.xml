@@ -26,11 +26,11 @@
                                 <tbody>
                                     <tr>
                                         <th style="width:120px">Date</th>
-                                        <th>Project</th>
+                                        <th style="width:250px">Project</th>
                                         <th>Task</th>
                                         <th>Description</th>
-                                        <th>Time Spent(Hours)</th>
-                                        <th>Project Hours</th> <!-- New column header -->
+                                        <th style="width:120px">Time Spent(Hours)</th>
+                                        <th style="width:250px">Project Hours</th>
                                     </tr>
                                     <t t-set="empty" t-value="0"/>
                                     <tr t-foreach="timesheets" t-as="t">
@@ -38,11 +38,11 @@
                                             <t t-set="total_1" t-value="0"/>
                                             <t t-set="timesheets_amount" t-value="total_1+t['total']"></t>
                                             <td><span t-esc="t['date']" /></td>
-                                            <td><span t-esc="t['project']" /></td>
+                                            <td style="width:250px"><span t-esc="t['project']" /></td>
                                             <td><span t-esc="t['task']" /></td>
                                             <td><span t-esc="t['description']" /></td>
                                             <td><span t-esc="t['duration']" /></td>
-                                            <td>
+                                            <td style="width:250px">
                                                 <t t-esc="project_hours_map.get((user['name'], t['project']), 0)" />
                                             </td>
                                         </t>
@@ -68,6 +68,9 @@
                             <t t-set="total_1"></t>
 
                             <br/>
+                            <div style="font-weight:bold; color:blue; font-size:14pt;">
+                                Scheduled Work Hours: <span t-esc="scheduled_hours"/>
+                            </div>
                         </t>
                     </div>
                 </div>

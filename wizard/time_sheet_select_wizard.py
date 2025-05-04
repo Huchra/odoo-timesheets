@@ -74,10 +74,13 @@ class timesheet_select(models.TransientModel):
                     project = rec.project_id.name or ''
                     project_hours_map[emp_name][project] = project_hours_map[emp_name].get(project, 0) + rec.unit_amount
 
-            sheet.set_column('C:C', 13)
+            sheet.set_column('C:C', 28)  # Scheduled Work Hours and other info
             sheet.set_column('D:E', 25)
             sheet.set_column('E:F', 25)
             sheet.set_column('G:G', 18)
+            sheet.set_column('H:H', 25)  # Project column (index 8)
+            sheet.set_column('I:I', 25)  # Project Hours column (index 9)
+            sheet.set_column('B:B', 28)  # Scheduled Work Hours (column B, index 1)
 
             row_t = 1
             col_t = 4
@@ -100,24 +103,8 @@ class timesheet_select(models.TransientModel):
                     tz = pytz.timezone(user_tz)
                     start_dt = tz.localize(datetime.combine(self.start_date, dt_time.min))
                     end_dt = tz.localize(datetime.combine(self.end_date, dt_time.max))
-                    # Get all scheduled hours for employee
                     scheduled_hours = employee.resource_calendar_id.get_work_hours_count(
-                        start_dt, end_dt)
-                    # Calculate leave hours for employee
-                    leave_hours = 0.0
-
-                    leaves = self.env['hr.leave'].search([
-                        ('employee_id', '=', employee.id),
-                        ('state', '=', 'validate'),
-                        ('date_from', '<=', end_dt),
-                        ('date_to', '>=', start_dt)
-                    ])
-                    for leave in leaves:
-                        hours = employee.resource_calendar_id.get_work_hours_count(
-                            leave.date_from, leave.date_to) # this is 24 hours not 8 per
-                        leave_hours += hours
-
-                    scheduled_hours -= leave_hours
+                        start_dt, end_dt, compute_leaves=True)
 
                 # Write scheduled hours info before the tables
                 sheet.write(row - 3, 2, f"Scheduled Work Hours: {scheduled_hours}", title_format)
