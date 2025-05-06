@@ -80,6 +80,7 @@ class timesheet_select(models.TransientModel):
             sheet.set_column('G:G', 18)
             sheet.set_column('H:H', 25)  # Project column (index 8)
             sheet.set_column('I:I', 25)  # Project Hours column (index 9)
+            sheet.set_column('J:J', 25)  # Description column (index 10)
             sheet.set_column('B:B', 28)  # Scheduled Work Hours (column B, index 1)
             sheet.set_column('A:A', 28)
 
